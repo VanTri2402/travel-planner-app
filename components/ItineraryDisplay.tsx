@@ -1,5 +1,5 @@
 import React from "react";
-import { ItineraryPlan } from "../types";
+import { ItineraryPlan } from "../types"; // Chỉ cần ItineraryPlan
 import {
   MapPinIcon,
   FoodIcon,
@@ -9,45 +9,41 @@ import {
 } from "./icons";
 
 interface ItineraryDisplayProps {
-  plan: ItineraryPlan;
+  plan: ItineraryPlan; // Chỉ nhận ItineraryPlan
 }
 
+// ... (logic parse và ICONS không đổi)
 type ActivityType = "EAT" | "VISIT" | "DO" | "STAY" | "TEXT";
-
 interface Activity {
   type: ActivityType;
   description: string;
 }
-
 interface DayPlan {
   title: string;
   activities: Activity[];
 }
-
 const ICONS: Record<
   ActivityType,
   { component: React.FC<{ className?: string }>; color: string }
 > = {
-  EAT: { component: FoodIcon, color: "bg-emerald-500/20 text-emerald-400" },
-  VISIT: { component: LandmarkIcon, color: "bg-sky-500/20 text-sky-400" },
-  DO: { component: ActivityIcon, color: "bg-amber-500/20 text-amber-400" },
-  STAY: { component: BedIcon, color: "bg-rose-500/20 text-rose-400" },
+  EAT: { component: FoodIcon, color: "bg-emerald-100 text-emerald-700" },
+  VISIT: { component: LandmarkIcon, color: "bg-sky-100 text-sky-700" },
+  DO: { component: ActivityIcon, color: "bg-amber-100 text-amber-700" },
+  STAY: { component: BedIcon, color: "bg-rose-100 text-rose-700" },
   TEXT: { component: () => null, color: "" },
 };
-
 const parseItineraryText = (text: string): DayPlan[] => {
+  // ... (logic parse không đổi)
   const dayPlans: DayPlan[] = [];
   const daySections = text
     .split(/#{2,3}\s*Day\s*\d+/g)
     .filter((section) => section.trim() !== "");
   const dayHeaders = text.match(/#{2,3}\s*Day\s*\d+.*?\n/g) || [];
-
   daySections.forEach((section, index) => {
     const title = dayHeaders[index]
       ? dayHeaders[index].replace(/#/g, "").trim()
       : `Day ${index + 1}`;
     const lines = section.split("\n").filter((line) => line.trim() !== "");
-
     const activities: Activity[] = lines.map((line) => {
       const trimmedLine = line.trim().replace(/^\*\s*/, "");
       if (trimmedLine.startsWith("EAT:"))
@@ -60,7 +56,6 @@ const parseItineraryText = (text: string): DayPlan[] => {
         return { type: "STAY", description: trimmedLine.substring(5).trim() };
       return { type: "TEXT", description: line };
     });
-
     dayPlans.push({ title, activities });
   });
   return dayPlans;
@@ -71,22 +66,24 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ plan }) => {
 
   return (
     <div className="w-full max-w-4xl mx-auto">
+      {/* **V4.0 RE-SKIN:** text-gray-900, text-gray-600 */}
       <div className="text-left mb-10">
-        <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl font-lexend">
+        <h2 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl font-lexend">
           Your AI-Woven Journey
         </h2>
-        <p className="mt-4 text-lg text-gray-400">
+        <p className="mt-4 text-lg text-gray-600">
           Here is your personalized itinerary. Have a wonderful trip!
         </p>
       </div>
 
+      {/* **V4.0 RE-SKIN:** bg-white, border-gray-200, shadow-lg, text-teal-600 */}
       {plan.sources.length > 0 && (
-        <div className="mb-10 bg-gray-900 border border-gray-700/50 rounded-2xl p-6 sm:p-8 shadow-xl animate-fade-in-up">
-          <h4 className="text-2xl font-semibold text-teal-400 mb-4 flex items-center gap-3 font-lexend">
+        <div className="mb-10 bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-lg animate-fade-in-up">
+          <h4 className="text-2xl font-semibold text-teal-600 mb-4 flex items-center gap-3 font-lexend">
             <MapPinIcon className="w-7 h-7" />
             Locations & Sources
           </h4>
-          <p className="text-sm text-gray-400 mb-4">
+          <p className="text-sm text-gray-500 mb-4">
             These locations from Google Maps were used to help generate your
             itinerary.
           </p>
@@ -97,7 +94,7 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ plan }) => {
                   href={source.uri}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-teal-400 hover:text-teal-300 hover:underline transition-colors duration-200 text-sm"
+                  className="text-teal-600 hover:text-teal-700 hover:underline transition-colors duration-200 text-sm"
                 >
                   {source.title}
                 </a>
@@ -111,25 +108,29 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ plan }) => {
         {dayPlans.map((day, dayIndex) => (
           <div
             key={dayIndex}
-            className="bg-gray-900 border border-gray-700/50 p-6 sm:p-8 rounded-2xl shadow-2xl animate-fade-in-up"
+            // **V4.0 RE-SKIN:** bg-white, border-gray-200, shadow-2xl
+            className="bg-white border border-gray-200 p-6 sm:p-8 rounded-2xl shadow-2xl animate-fade-in-up"
             style={{ animationDelay: `${dayIndex * 150}ms` }}
           >
-            <h3 className="text-3xl font-bold text-white mb-6 font-lexend">
+            {/* **V4.0 RE-SKIN:** text-gray-900 */}
+            <h3 className="text-3xl font-bold text-gray-900 mb-6 font-lexend">
               {day.title}
             </h3>
             <div className="space-y-4">
               {day.activities.map((activity, activityIndex) => {
                 if (activity.type === "TEXT") {
                   return (
+                    // **V4.0 RE-SKIN:** text-gray-700
                     <p
                       key={activityIndex}
-                      className="text-gray-300 text-lg leading-relaxed italic"
+                      className="text-gray-700 text-lg leading-relaxed italic"
                     >
                       {activity.description}
                     </p>
                   );
                 }
                 const IconComponent = ICONS[activity.type].component;
+                // **V4.0 RE-SKIN:** Cập nhật màu Icon
                 const iconColors = ICONS[activity.type].color.split(" ");
                 const iconBg = iconColors[0];
                 const iconText = iconColors[1];
@@ -137,7 +138,8 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ plan }) => {
                 return (
                   <div
                     key={activityIndex}
-                    className="flex items-start gap-4 p-4 bg-gray-800 rounded-lg animate-fade-in-up"
+                    // **V4.0 RE-SKIN:** bg-gray-100 (thay vì 800)
+                    className="flex items-start gap-4 p-4 bg-gray-100 rounded-lg animate-fade-in-up"
                     style={{
                       animationDelay: `${
                         dayIndex * 150 + (activityIndex + 1) * 75
@@ -149,7 +151,8 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ plan }) => {
                     >
                       <IconComponent className={`w-5 h-5 ${iconText}`} />
                     </div>
-                    <p className="text-gray-200 text-base pt-2">
+                    {/* **V4.0 RE-SKIN:** text-gray-800 */}
+                    <p className="text-gray-800 text-base pt-2">
                       {activity.description}
                     </p>
                   </div>

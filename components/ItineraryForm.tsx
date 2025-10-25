@@ -2,6 +2,7 @@ import React from "react";
 import { SparklesIcon, MapPinIcon, CalendarIcon } from "./icons";
 
 interface ItineraryFormProps {
+  // ... (props không đổi)
   destination: string;
   setDestination: (value: string) => void;
   duration: number;
@@ -26,14 +27,16 @@ const ItineraryForm: React.FC<ItineraryFormProps> = ({
     <form onSubmit={onSubmit} className="w-full mx-auto space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
+          {/* **V4.0 RE-SKIN:** label text-gray-700 */}
           <label
             htmlFor="destination"
-            className="block text-sm font-medium text-gray-300 mb-2"
+            className="block text-sm font-medium text-gray-700 mb-2"
           >
             Destination
           </label>
           <div className="relative">
             <MapPinIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            {/* **V4.0 RE-SKIN:** input styling */}
             <input
               type="text"
               id="destination"
@@ -41,14 +44,14 @@ const ItineraryForm: React.FC<ItineraryFormProps> = ({
               onChange={(e) => setDestination(e.target.value)}
               placeholder="e.g., Kyoto, Japan"
               required
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 pl-10 pr-4 text-gray-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition"
+              className="w-full bg-white border border-gray-300 rounded-lg py-3 pl-10 pr-4 text-gray-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition"
             />
           </div>
         </div>
         <div>
           <label
             htmlFor="duration"
-            className="block text-sm font-medium text-gray-300 mb-2"
+            className="block text-sm font-medium text-gray-700 mb-2"
           >
             Duration (days)
           </label>
@@ -64,7 +67,7 @@ const ItineraryForm: React.FC<ItineraryFormProps> = ({
               min="1"
               max="14"
               required
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 pl-10 pr-4 text-gray-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition"
+              className="w-full bg-white border border-gray-300 rounded-lg py-3 pl-10 pr-4 text-gray-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition"
             />
           </div>
         </div>
@@ -72,7 +75,7 @@ const ItineraryForm: React.FC<ItineraryFormProps> = ({
       <div>
         <label
           htmlFor="interests"
-          className="block text-sm font-medium text-gray-300 mb-2"
+          className="block text-sm font-medium text-gray-700 mb-2"
         >
           Interests & Vibe
         </label>
@@ -83,14 +86,15 @@ const ItineraryForm: React.FC<ItineraryFormProps> = ({
           placeholder="e.g., a relaxing foodie trip with a focus on history and nature"
           rows={3}
           required
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-gray-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition"
+          className="w-full bg-white border border-gray-300 rounded-lg py-3 px-4 text-gray-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition"
         />
       </div>
       <div>
+        {/* Nút giữ nguyên màu teal, rất tốt */}
         <button
           type="submit"
           disabled={isGenerating}
-          className="w-full flex items-center justify-center gap-2 bg-teal-500 hover:bg-teal-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 disabled:bg-teal-900/80 disabled:text-gray-400 disabled:cursor-not-allowed transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-teal-500/50 hover:shadow-lg hover:shadow-teal-500/40"
+          className="w-full flex items-center justify-center gap-2 bg-teal-500 hover:bg-teal-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 disabled:bg-teal-300 disabled:cursor-not-allowed transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-teal-500/50 hover:shadow-lg hover:shadow-teal-500/40"
         >
           {isGenerating ? (
             <>

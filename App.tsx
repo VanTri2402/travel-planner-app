@@ -1,36 +1,67 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import ProtectedRoute from "./components/ProtectedRoute"; // **V6.0 MỚI**
 import CreatePlanner from "./pages/CreatePlanner";
 import History from "./pages/History";
 import PlannerDetail from "./pages/PlannerDetail";
 import Destinations from "./pages/Destinations";
-import Profile from "./pages/Profle";
+import Profile from "./pages/Profile";
+import Callback from "./pages/Callback"; // **V6.0 MỚI**
+import NotFound from "./pages/NotFound"; // **V6.0 MỚI**
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-gray-950 text-gray-100">
-        <Navbar />
+    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col">
+      <Navbar />
 
-        {/* Nội dung trang sẽ được render bên dưới Navbar */}
-        <main className="pt-20">
-          {" "}
-          {/* pt-20 để tạo khoảng trống cho Navbar sticky */}
-          <Routes>
-            <Route path="/" element={<CreatePlanner />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/planner/:id" element={<PlannerDetail />} />
+      <main className="pt-20 flex-grow">
+        <Routes>
+          {/* Routes Công khai */}
+          <Route path="/" element={<CreatePlanner />} />
+          <Route path="/callback" element={<Callback />} />
 
-            {/* Stubbed Pages */}
-            <Route path="/destinations" element={<Destinations />} />
-            <Route path="/profile" element={<Profile />} />
+          {/* **V6.0 UPDATE:** Routes được bảo vệ */}
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute>
+                <History />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/planner/:id"
+            element={
+              <ProtectedRoute>
+                <PlannerDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/destinations"
+            element={
+              <ProtectedRoute>
+                <Destinations />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
 
-            {/* Redirect nếu không tìm thấy route */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      </div>
+          {/* Trang 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+
+      <Footer />
 
       <style>{`
           @keyframes fade-in-up {
@@ -42,7 +73,7 @@ const App: React.FC = () => {
               opacity: 0;
           }
       `}</style>
-    </BrowserRouter>
+    </div>
   );
 };
 
