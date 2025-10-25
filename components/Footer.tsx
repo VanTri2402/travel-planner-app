@@ -51,7 +51,7 @@ const Footer: React.FC = () => {
               <span className="sr-only">GitHub</span>
             </a>
             <a
-              href="mailto:contact@journeyweaver.com" // **Email liên hệ của bạn**
+              href="github.com/VanTri2402" // **Email liên hệ của bạn**
               className="text-gray-500 hover:text-gray-900 transition-colors"
               title="Contact Us via Email"
             >
