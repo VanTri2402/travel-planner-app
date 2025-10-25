@@ -1,0 +1,7 @@
+{
+  "name": "AI Journey Weaver",
+  "description": "An intelligent travel companion that crafts hyper-personalized, real-time itineraries using Gemini and Google Maps data. It learns your travel style to weave unique, multi-sensory journeys.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
