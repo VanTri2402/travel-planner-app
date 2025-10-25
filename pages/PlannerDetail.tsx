@@ -1,66 +1,74 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-
+// **FIX:** Bỏ import SavedItinerary không cần thiết ở đây
+// import { SavedItinerary } from '../types';
+import { useStorage } from "../hooks/storageService"; // Đã sửa đường dẫn import
 import { imageGenService } from "../services/imageGenService";
 import ItineraryDisplay from "../components/ItineraryDisplay";
 import LoadingSpinner from "../components/LoadingSpinner";
-import ConfirmationModal from "../components/ConfirmationModal"; // **V6.0 MỚI**
-import { MapPinIcon, TrashIcon } from "../components/icons";
-import { useStorage } from "@/hooks/storageService";
+import ConfirmationModal from "../components/ConfirmationModal";
+import { MapPinIcon, TrashIcon, SparklesIcon } from "../components/icons"; // **FIX:** Thêm SparklesIcon
 
 const PlannerDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // **V6.0 MỚI:** Dùng hook useStorage
   const {
     getItineraryById,
     updateNotes,
     updateGeneratedImageURLs,
     deleteItinerary,
-    isLoading: isStorageLoading,
+    isLoading: isStorageLoading, // Lấy trạng thái loading từ hook
   } = useStorage();
 
-  const [plan, setPlan] = useState<any | null>(null); // Dùng 'any' vì state nội bộ
+  const [plan, setPlan] = useState<any | null>(null);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [notes, setNotes] = useState<string>("");
-  const [modalOpen, setModalOpen] = useState(false); // **V6.0 MỚI**
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
-    if (!id || isStorageLoading) return;
+    // Chỉ chạy logic khi ID tồn tại VÀ storage không còn loading
+    if (id && !isStorageLoading) {
+      const loadedPlan = getItineraryById(id);
 
-    const loadedPlan = getItineraryById(id);
-    if (!loadedPlan) {
-      // Nếu không tìm thấy plan (ví dụ: đã bị xóa hoặc sai ID)
-      navigate("/404"); // Chuyển hướng đến trang 404
-      return;
-    }
+      if (!loadedPlan) {
+        console.warn(`Plan with ID ${id} not found after storage loaded.`); // Log để debug
+        return; // Dừng useEffect ở đây
+      }
 
-    setPlan(loadedPlan);
-    setNotes(loadedPlan.notes);
+      // Nếu tìm thấy plan
+      setPlan(loadedPlan);
+      setNotes(loadedPlan.notes);
 
-    if (!loadedPlan.heroImageURL && !loadedPlan.mapImageURL) {
-      setIsGeneratingImages(true);
-      Promise.all([
-        imageGenService.simulateImageGeneration(
-          loadedPlan.generatedPlan.imageGenerationPrompt,
-          1600,
-          900
-        ),
-        imageGenService.simulateImageGeneration(
-          loadedPlan.generatedPlan.mapGenerationPrompt,
-          800,
-          800
-        ),
-      ]).then(([heroURL, mapURL]) => {
-        updateGeneratedImageURLs(id, heroURL, mapURL); // Lưu vào storage
-        setPlan((prev) => ({
-          ...prev,
-          heroImageURL: heroURL,
-          mapImageURL: mapURL,
-        })); // Cập nhật state
-        setIsGeneratingImages(false);
-      });
+      // Kích hoạt tạo ảnh (logic này giữ nguyên)
+      if (!loadedPlan.heroImageURL && !loadedPlan.mapImageURL) {
+        setIsGeneratingImages(true);
+        Promise.all([
+          imageGenService.simulateImageGeneration(
+            loadedPlan.generatedPlan.imageGenerationPrompt,
+            1600,
+            900
+          ),
+          imageGenService.simulateImageGeneration(
+            loadedPlan.generatedPlan.mapGenerationPrompt,
+            800,
+            800
+          ),
+        ])
+          .then(([heroURL, mapURL]) => {
+            updateGeneratedImageURLs(id, heroURL, mapURL);
+            setPlan((prev) => ({
+              ...prev,
+              heroImageURL: heroURL,
+              mapImageURL: mapURL,
+            }));
+            setIsGeneratingImages(false);
+          })
+          .catch((error) => {
+            console.error("Error simulating image generation:", error);
+            setIsGeneratingImages(false); // Đảm bảo tắt loading nếu có lỗi
+          });
+      }
     }
   }, [
     id,
@@ -68,38 +76,116 @@ const PlannerDetail: React.FC = () => {
     getItineraryById,
     updateGeneratedImageURLs,
     navigate,
-  ]);
+  ]); // Thêm isStorageLoading vào dependency array
 
   const handleNotesBlur = () => {
-    if (plan) {
-      updateNotes(plan.id, notes); // Dùng hàm từ hook
+    if (plan && id) {
+      // **FIX:** Thêm kiểm tra 'id' cho chắc chắn
+      updateNotes(id, notes);
     }
   };
 
-  // **V6.0 MỚI:** Xử lý Xóa
   const handleConfirmDelete = () => {
-    if (plan) {
-      deleteItinerary(plan.id);
+    if (plan && id) {
+      // **FIX:** Thêm kiểm tra 'id'
+      deleteItinerary(id);
       setModalOpen(false);
-      navigate("/history"); // Chuyển hướng về trang lịch sử
+      navigate("/history", { replace: true });
     }
   };
 
-  // ... (Hàm renderHeroContent và renderMapContent không đổi từ v5.0) ...
+  // **FIX:** Sửa lại hàm render Hero/Map để xử lý trường hợp plan là null ban đầu
   const renderHeroContent = () => {
-    /* ... giữ nguyên v5.0 ... */
-  };
-  const renderMapContent = () => {
-    /* ... giữ nguyên v5.0 ... */
+    // Nếu plan chưa tải xong hoặc đang tạo ảnh
+    if (!plan || isGeneratingImages) {
+      return (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+          <LoadingSpinner
+            text={
+              isGeneratingImages ? "Generating hero image..." : "Loading..."
+            }
+          />
+        </div>
+      );
+    }
+
+    // Nếu có URL ảnh
+    if (plan.heroImageURL) {
+      return (
+        <>
+          <img
+            src={plan.heroImageURL}
+            alt={plan.generatedPlan.seoTitle}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
+        </>
+      );
+    }
+
+    // Fallback: Hiển thị prompt
+    return (
+      <div className="p-8 h-full flex flex-col justify-end bg-gray-100">
+        <div className="flex items-center gap-2 text-teal-700">
+          <SparklesIcon className="w-5 h-5 flex-shrink-0" />
+          <span className="text-sm font-semibold uppercase tracking-wider">
+            Hero Image Prompt
+          </span>
+        </div>
+        <p className="text-gray-700 text-lg mt-2 line-clamp-4">
+          {plan.generatedPlan.imageGenerationPrompt}
+        </p>
+      </div>
+    );
   };
 
-  if (isStorageLoading || !plan) {
+  const renderMapContent = () => {
+    if (!plan || isGeneratingImages) {
+      return (
+        <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+          <LoadingSpinner
+            text={
+              isGeneratingImages ? "Generating map..." : "Loading map data..."
+            }
+          />
+        </div>
+      );
+    }
+
+    if (plan.mapImageURL) {
+      return (
+        <img
+          src={plan.mapImageURL}
+          alt="Generated map"
+          className="h-64 w-full object-cover rounded-lg border border-gray-200"
+        />
+      );
+    }
+
+    return (
+      <div className="h-64 bg-gray-100 rounded-lg flex flex-col justify-center p-4 text-left">
+        <span className="text-xs font-semibold uppercase tracking-wider text-teal-700">
+          Map Prompt
+        </span>
+        <p className="text-gray-600 text-sm mt-2 line-clamp-5">
+          {plan.generatedPlan.mapGenerationPrompt}
+        </p>
+      </div>
+    );
+  };
+
+  // **FIX:** Xử lý trạng thái loading tổng thể của trang tốt hơn
+  if (isStorageLoading || (!plan && !id)) {
+    // Hiển thị loading nếu storage đang load HOẶC chưa có ID
     return (
       <div className="container p-8 text-center">
         <LoadingSpinner text="Loading journey details..." />
       </div>
     );
   }
+
+  // Trường hợp ID có nhưng plan không tìm thấy (đã được xử lý bởi useEffect và navigate('/404'))
+  // Code dưới đây chỉ chạy khi `plan` đã được load thành công.
 
   return (
     <>
@@ -112,15 +198,30 @@ const PlannerDetail: React.FC = () => {
       />
       <div className="animate-fade-in-up">
         {/* 1. Hero Banner */}
-        <div className="relative w-full h-80 lg:h-96 bg-gray-200 border-b border-gray-200">
-          {/* ... (Nội dung Hero) ... */}
+        <div className="relative w-full h-80 lg:h-96 bg-gray-200 border-b border-gray-200 overflow-hidden">
+          {renderHeroContent()}
+          {plan &&
+            !isGeneratingImages && ( // Chỉ hiển thị tiêu đề khi có plan và không đang tạo ảnh
+              <div className="absolute bottom-0 left-0 right-0 z-10 container mx-auto max-w-7xl p-8 ">
+                <h1
+                  className={`text-5xl font-bold font-lexend ${
+                    plan.heroImageURL
+                      ? "text-white drop-shadow-lg"
+                      : "text-gray-900"
+                  }`}
+                >
+                  {plan.generatedPlan.seoTitle}
+                </h1>
+              </div>
+            )}
         </div>
 
         {/* 2. Nội dung chi tiết */}
         <div className="container mx-auto max-w-7xl p-4 sm:p-6 lg:p-8 mt-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
-              <ItineraryDisplay plan={plan.generatedPlan.plan} />
+              {/* Chỉ render ItineraryDisplay khi plan đã có */}
+              {plan && <ItineraryDisplay plan={plan.generatedPlan.plan} />}
             </div>
 
             <div className="lg:col-span-1">
@@ -130,10 +231,8 @@ const PlannerDetail: React.FC = () => {
                   Trip Assets
                 </h3>
 
-                {/* Map Động */}
                 {renderMapContent()}
 
-                {/* My Notes */}
                 <div className="mt-6">
                   <h4 className="text-lg font-semibold text-gray-900 font-lexend">
                     My Notes
@@ -147,7 +246,6 @@ const PlannerDetail: React.FC = () => {
                   />
                 </div>
 
-                {/* **V6.0 MỚI:** Nút Xóa */}
                 <div className="mt-6 border-t border-gray-200 pt-6">
                   <button
                     onClick={() => setModalOpen(true)}

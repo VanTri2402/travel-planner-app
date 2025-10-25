@@ -5,31 +5,28 @@ import { generateItinerary } from "../services/geminiService";
 import ItineraryForm from "../components/ItineraryForm";
 import WelcomeDisplay from "../components/WelcomeDisplay";
 import { CompassIcon } from "../components/icons";
-import { useStorage } from "@/hooks/storageService";
+import { useStorage } from "@/hooks/storageService"; // **V6.0 MỚI**
+
+// **V4.0 RE-SKIN:** "Re-skin" component này sang chủ đề Sáng
 const PlannerFormCard: React.FC<any> = (props) => (
   <>
     <header className="mb-8">
       <div className="flex items-center gap-4">
         <CompassIcon className="w-12 h-12 text-teal-500" />
-
         <div>
           <h1 className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-teal-500 to-cyan-600 font-lexend">
             AI Journey Weaver
           </h1>
-
           <p className="mt-1 text-lg text-gray-600">
             Your personal AI travel companion.
           </p>
         </div>
       </div>
     </header>
-
     {/* **V4.0 RE-SKIN:** bg-white, border, shadow */}
-
     <section className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-lg">
       <ItineraryForm {...props} />
     </section>
-
     {props.locationError && (
       <div className="text-center mt-6 p-3 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded-lg">
         {props.locationError}
@@ -56,6 +53,27 @@ const CreatePlanner: React.FC = () => {
 
   useEffect(() => {
     /* ... (logic lấy location không đổi) ... */
+    // Logic lấy location... (giữ nguyên từ các phiên bản trước)
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+          setLocationError(null);
+        },
+        (err) => {
+          console.error("Geolocation error:", err);
+          setLocationError("Could not get location. Using a default.");
+          // Fallback location (e.g., Googleplex)
+          setUserLocation({ latitude: 37.422, longitude: -122.084 });
+        }
+      );
+    } else {
+      setLocationError("Geolocation is not supported. Using a default.");
+      setUserLocation({ latitude: 37.422, longitude: -122.084 });
+    }
   }, []);
 
   const handleGenerateItinerary = useCallback(
@@ -120,7 +138,37 @@ const CreatePlanner: React.FC = () => {
 
   // ... (hàm renderRightColumn không đổi) ...
   const renderRightColumn = () => {
-    /* ... */
+    if (isGenerating) {
+      return (
+        <div className="flex flex-col justify-center items-center h-full min-h-[50vh] animate-fade-in-up">
+          <svg
+            className="animate-spin h-10 w-10 text-teal-500"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            ></circle>
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+          <p className="text-xl mt-4 font-lexend text-gray-700">
+            Weaving your journey...
+          </p>
+        </div>
+      );
+    }
+    // Trạng thái thành công giờ là chuyển hướng, vì vậy chúng ta chỉ hiển thị Welcome
+    return <WelcomeDisplay />;
   };
 
   return (
