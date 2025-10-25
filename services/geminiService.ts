@@ -1,6 +1,5 @@
-
 import { GoogleGenAI } from "@google/genai";
-import { UserLocation, ItineraryPlan, GroundingSource } from '../types';
+import { UserLocation, ItineraryPlan, GroundingSource } from "../types";
 
 if (!process.env.API_KEY) {
   throw new Error("API_KEY environment variable not set");
@@ -34,44 +33,48 @@ Start your morning with a peaceful walk through the historic district to soak in
 * DO: Participate in a traditional tea ceremony in the Gion district.
 
 Your response will be parsed automatically, so adhering to this format is essential. The user is currently located near latitude ${location.latitude} and longitude ${location.longitude}, use this for context if relevant for travel planning.`;
-    
+
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-pro",
       contents: prompt,
       config: {
-        tools: [{googleMaps: {}}],
+        tools: [{ googleMaps: {} }],
         toolConfig: {
           retrievalConfig: {
             latLng: {
               latitude: location.latitude,
-              longitude: location.longitude
-            }
-          }
-        }
+              longitude: location.longitude,
+            },
+          },
+        },
       },
     });
 
     const itineraryText = response.text;
-    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-    
+    const groundingChunks =
+      response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+
     const sources: GroundingSource[] = groundingChunks
-      .filter(chunk => chunk.maps && chunk.maps.uri && chunk.maps.title)
-      .map(chunk => ({
+      .filter((chunk) => chunk.maps && chunk.maps.uri && chunk.maps.title)
+      .map((chunk) => ({
         uri: chunk.maps.uri,
         title: chunk.maps.title,
       }));
 
     if (!itineraryText) {
-        throw new Error("The AI returned an empty itinerary. Please try again with a different prompt.");
+      throw new Error(
+        "The AI returned an empty itinerary. Please try again with a different prompt."
+      );
     }
-    
-    return { itineraryText, sources };
 
+    return { itineraryText, sources };
   } catch (error) {
     console.error("Error generating itinerary:", error);
     if (error instanceof Error) {
-        throw new Error(`Failed to generate itinerary: ${error.message}`);
+      throw new Error(`Failed to generate itinerary: ${error.message}`);
     }
-    throw new Error("An unknown error occurred while generating the itinerary.");
+    throw new Error(
+      "An unknown error occurred while generating the itinerary."
+    );
   }
 };
