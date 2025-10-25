@@ -145,7 +145,11 @@ const PlannerDetail: React.FC = () => {
               e.currentTarget.style.display = "none";
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
+          <img
+            src="https://wallpaperaccess.com/full/3917296.jpg"
+            alt="default"
+            className="absolute inset-0"
+          />
         </>
       );
     }
@@ -265,46 +269,9 @@ const PlannerDetail: React.FC = () => {
 
         {/* 2. Nội dung chi tiết */}
         <div className="container mx-auto max-w-7xl p-4 sm:p-6 lg:p-8 mt-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
+          <div className="gap-8">
+            <div className="">
               {plan && <ItineraryDisplay plan={plan.generatedPlan.plan} />}
-            </div>
-
-            <div className="lg:col-span-1">
-              {/* Card bên phải */}
-              <div className="sticky top-24 bg-white border border-gray-200 rounded-2xl shadow-xl p-6 transition-all duration-300 hover:shadow-2xl">
-                <h3 className="text-2xl font-bold text-gray-900 font-lexend mb-4 flex items-center gap-2">
-                  <MapPinIcon className="w-6 h-6 text-teal-500" />
-                  Trip Assets
-                </h3>
-
-                {renderMapContent()}
-
-                {/* My Notes */}
-                <div className="mt-6">
-                  <h4 className="text-lg font-semibold text-gray-900 font-lexend">
-                    My Notes
-                  </h4>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    onBlur={handleNotesBlur}
-                    className="w-full h-32 mt-2 bg-white border border-gray-300 rounded-lg p-3 text-gray-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition"
-                    placeholder="Add your personal notes here..."
-                  />
-                </div>
-
-                {/* Nút Xóa */}
-                <div className="mt-6 border-t border-gray-200 pt-6">
-                  <button
-                    onClick={() => setModalOpen(true)}
-                    className="w-full flex items-center justify-center gap-2 bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-3 px-6 rounded-lg transition-all duration-300"
-                  >
-                    <TrashIcon className="w-5 h-5" />
-                    Delete This Journey
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>

@@ -36,7 +36,6 @@ const ItineraryForm: React.FC<ItineraryFormProps> = ({
           </label>
           <div className="relative">
             <MapPinIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            {/* **V4.0 RE-SKIN:** input styling */}
             <input
               type="text"
               id="destination"

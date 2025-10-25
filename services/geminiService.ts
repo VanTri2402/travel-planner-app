@@ -3,7 +3,7 @@ import {
   UserLocation,
   GroundingSource,
   GeneratedPlan,
-  ItineraryPlan, // Cần cho type fallback
+  ItineraryPlan,
 } from "../types";
 
 if (!process.env.API_KEY) {
@@ -20,30 +20,33 @@ export const generateItinerary = async (
 ): Promise<GeneratedPlan> => {
   try {
     // **V6.2:** Prompt với ràng buộc ngày mạnh mẽ hơn
-    const prompt = `You are an expert travel planner, an "AI Journey Weaver." 
-    Create a detailed, creative travel itinerary for a ${duration}-day trip to ${destination}. 
-    Traveler's interests: "${interests}". 
+    const prompt = `You are an expert travel planner, an "AI Journey Weaver."
+    Create a detailed, creative travel itinerary for a ${duration}-day trip to ${destination}.
+    Traveler's interests: "${interests}".
     The user is near ${location.latitude}, ${location.longitude}.
 
     **CRITICAL: YOUR RESPONSE MUST BE A SINGLE, VALID JSON OBJECT.**
-    Do NOT use markdown fences (\`\`\`json ... \`\`\`).
+    Do NOT use markdown fences (\`\`\`json ... \`\`\`). Do not add any text before or after the JSON object.
     The JSON object must contain these exact keys with string values:
-    
+
     1.  "itineraryText": String containing the full itinerary in MARKDOWN format.
-        - MUST use "### Day N: [Title]" for each day's heading.
-        - MUST use "EAT:", "VISIT:", "DO:" prefixes for specific activities.
-        - **ABSOLUTE CONSTRAINT:** Generate *exactly* ${duration} day sections (from "### Day 1" to "### Day ${duration}"). No more, no less. Verify the day count before finalizing the response.
-    
+        - MUST use "### Day N: [Title]" for each day's heading (e.g., "### Day 1: Arrival").
+        - MUST use "EAT:", "VISIT:", "DO:", "STAY:" prefixes (followed by a colon and a space) for specific activities.
+        - **ABSOLUTE CONSTRAINT:** Generate *exactly* ${duration} day sections (from "### Day 1" to "### Day ${duration}"). No more, no less. Verify the day count before finalizing the response. The structure must strictly follow the requested number of days.
+
     2.  "seoTitle": A catchy, short string title for this specific ${duration}-day trip to ${destination}.
-    
-    3.  "imageGenerationPrompt": A high-quality, English string prompt for an AI image generator (like DALL-E) to create a stunning hero banner image representing ${destination}.
-    
-    4.  "mapGenerationPrompt": A high-quality, English string prompt for an AI to generate a minimalist vector map highlighting key areas for this trip in ${destination}.
+
+    3.  "imageGenerationPrompt": A high-quality, English string prompt for an AI image generator (like DALL-E) to create a stunning hero banner image representing ${destination}. Focus on visual details and mood.
+
+    4.  "mapGenerationPrompt": A high-quality, English string prompt for an AI to generate a minimalist vector map highlighting key areas mentioned in the itinerary for this trip in ${destination}. Focus on landmarks and simplicity.
     `;
 
+    console.log("[geminiService] Sending prompt to Gemini:", prompt); // DEBUG
+
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-flash", // Using Flash model
       contents: prompt,
+      // config and toolConfig remain the same
       config: {
         tools: [{ googleMaps: {} }],
         toolConfig: {
@@ -58,6 +61,15 @@ export const generateItinerary = async (
       responseMimeType: "application/json",
     });
 
+    console.log(
+      "[geminiService] Received response object from Gemini:",
+      response
+    ); // DEBUG full response object
+    console.log(
+      "[geminiService] Raw candidate content:",
+      response?.candidates?.[0]?.content
+    ); // DEBUG content part
+
     const groundingChunks =
       response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     const sources: GroundingSource[] = groundingChunks
@@ -68,71 +80,99 @@ export const generateItinerary = async (
     let parsedResponse: any;
 
     try {
-      // **V6.2:** Lấy text JSON từ response một cách an toàn hơn
+      // **V6.2:** An toàn hơn khi truy cập text
       rawJsonText = response.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+      console.log("[geminiService] Raw text extracted:", rawJsonText); // DEBUG extracted text
 
       if (!rawJsonText) {
-        throw new Error("Gemini response text is empty or null.");
+        throw new Error("Gemini response did not contain text content."); // Lỗi cụ thể hơn
       }
 
-      // **V6.2:** Làm sạch backticks và khoảng trắng trước khi parse
-      const cleanedJsonText = rawJsonText
-        .replace(/^```json\s*/, "") // Bỏ ```json ở đầu
-        .replace(/\s*```$/, "") // Bỏ ``` ở cuối
-        .trim(); // Bỏ khoảng trắng thừa
+      // **V6.2:** Làm sạch JSON một cách an toàn hơn
+      let cleanedJsonText = rawJsonText.trim();
+      // Kiểm tra và loại bỏ backticks chỉ khi chúng bao quanh toàn bộ chuỗi
+      if (
+        cleanedJsonText.startsWith("```json") &&
+        cleanedJsonText.endsWith("```")
+      ) {
+        cleanedJsonText = cleanedJsonText
+          .substring(7, cleanedJsonText.length - 3)
+          .trim();
+        console.log("[geminiService] Cleaned ```json fences."); // DEBUG
+      } else if (
+        cleanedJsonText.startsWith("```") &&
+        cleanedJsonText.endsWith("```")
+      ) {
+        cleanedJsonText = cleanedJsonText
+          .substring(3, cleanedJsonText.length - 3)
+          .trim();
+        console.log("[geminiService] Cleaned ``` fences."); // DEBUG
+      }
+      // Thêm bước thử loại bỏ ký tự không mong muốn ở đầu (nếu có)
+      cleanedJsonText = cleanedJsonText.replace(/^[^{]*/, ""); // Loại bỏ mọi thứ trước dấu { đầu tiên
 
       if (!cleanedJsonText) {
-        throw new Error("Cleaned JSON text is empty.");
+        throw new Error("JSON text is empty after cleaning.");
       }
 
+      console.log(
+        "[geminiService] Attempting to parse cleaned JSON:",
+        cleanedJsonText
+      ); // DEBUG before parse
       parsedResponse = JSON.parse(cleanedJsonText);
+      console.log("[geminiService] Successfully parsed JSON:", parsedResponse); // DEBUG
     } catch (e: any) {
       console.error(
         "[geminiService] Failed to parse JSON response. Falling back.",
         "Error:",
         e.message,
         "Raw Text:",
-        rawJsonText // Log cả raw text để debug
+        rawJsonText
       );
-      // **V6.2:** Cải thiện thông báo lỗi fallback
+      // Fallback với thông báo lỗi rõ ràng hơn
       const errorPlan: ItineraryPlan = {
-        itineraryText: `**Error:**\nCould not correctly parse the itinerary generated by the AI for **${destination}**. \nThis might be a temporary issue with the AI's response format. \nPlease try generating again. \n\n(Technical details: JSON parsing failed)`,
-        sources: sources, // Vẫn trả về sources nếu có
+        itineraryText: `**Error:**\nCould not correctly parse the itinerary generated by the AI for **${destination}**. \nThis often happens due to unexpected formatting in the AI response. \nPlease try generating again. \n\n(Technical details: JSON parsing failed - ${e.message})`,
+        sources: sources,
       };
       return {
         plan: errorPlan,
-        seoTitle: `Error Generating Trip for ${destination}`,
-        imageGenerationPrompt: `A generic travel image showing a plane or luggage, representing a travel planning error for ${destination}`,
-        mapGenerationPrompt: `A simple placeholder map icon indicating an error generating the map for ${destination}`,
+        seoTitle: `Error Generating Trip`,
+        imageGenerationPrompt: `Error`,
+        mapGenerationPrompt: `Error`,
       };
     }
 
-    // Kiểm tra các trường bắt buộc (giữ nguyên)
-    if (
-      !parsedResponse.itineraryText ||
-      typeof parsedResponse.itineraryText !== "string" ||
-      !parsedResponse.seoTitle ||
-      typeof parsedResponse.seoTitle !== "string" ||
-      !parsedResponse.imageGenerationPrompt ||
-      typeof parsedResponse.imageGenerationPrompt !== "string" ||
-      !parsedResponse.mapGenerationPrompt ||
-      typeof parsedResponse.mapGenerationPrompt !== "string"
-    ) {
-      console.error("Incomplete JSON response:", parsedResponse);
-      throw new Error(
-        "AI returned incomplete or incorrectly typed data. Missing or invalid required JSON keys."
-      );
+    // Kiểm tra các trường bắt buộc
+    const requiredKeys = [
+      "itineraryText",
+      "seoTitle",
+      "imageGenerationPrompt",
+      "mapGenerationPrompt",
+    ];
+    for (const key of requiredKeys) {
+      if (!parsedResponse[key] || typeof parsedResponse[key] !== "string") {
+        console.error(
+          `Incomplete/invalid JSON: Key "${key}" missing or not a string.`,
+          parsedResponse
+        );
+        throw new Error(
+          `AI response JSON is missing or has invalid type for key "${key}".`
+        );
+      }
     }
 
-    // Kiểm tra số ngày (giữ nguyên)
+    // Kiểm tra số ngày
     const dayCount = (parsedResponse.itineraryText.match(/### Day \d+/g) || [])
       .length;
+    console.log(
+      `[geminiService] Requested days: ${duration}, Generated days: ${dayCount}`
+    ); // DEBUG
     if (dayCount !== duration) {
       console.warn(
-        `[geminiService] Gemini generated ${dayCount} days, requested ${duration}.`
+        `[geminiService] Mismatch: Gemini generated ${dayCount} days, but ${duration} were requested.`
       );
-      // Cân nhắc: Có thể bạn muốn cắt bớt itineraryText ở đây nếu bị dư ngày
-      // Hoặc yêu cầu người dùng thử lại
+      // Cân nhắc thêm: Nếu số ngày sai, có thể trả về lỗi để người dùng biết và thử lại
+      // throw new Error(`AI generated ${dayCount} days instead of the requested ${duration}. Please try again.`);
     }
 
     const generatedPlan: GeneratedPlan = {
@@ -151,7 +191,6 @@ export const generateItinerary = async (
       "[geminiService] Error during API call or processing:",
       error
     );
-    // Trả về một GeneratedPlan lỗi chung
     const errorPlan: ItineraryPlan = {
       itineraryText: `**Error:**\nAn unexpected error occurred while generating the itinerary for **${destination}**. \nPlease try again later. \n\n(Technical details: ${
         error.message || "Unknown API error"
@@ -160,9 +199,9 @@ export const generateItinerary = async (
     };
     return {
       plan: errorPlan,
-      seoTitle: `Error Generating Trip for ${destination}`,
-      imageGenerationPrompt: `A generic error image related to travel planning for ${destination}`,
-      mapGenerationPrompt: `An error icon instead of a map for ${destination}`,
+      seoTitle: `Error Generating Trip`,
+      imageGenerationPrompt: `Error`,
+      mapGenerationPrompt: `Error`,
     };
   }
 };

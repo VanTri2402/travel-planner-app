@@ -1,13 +1,12 @@
 /**
- * **V6.2 FIX:**
- * - Mở rộng danh sách ảnh kỳ quan.
- * - Sửa lỗi seed ngẫu nhiên cho ảnh fallback để đảm bảo tính duy nhất dựa trên prompt.
- * - Xác minh lại logic map.
+ * **V6.2 FINAL FIX:**
+ * - Sử dụng uniqueSeedInput (ưu tiên planId) để tạo seed DUY NHẤT cho ảnh fallback.
  */
 
-// Hàm tạo seed đơn giản từ chuỗi (để dùng cho fallback)
+// Hàm hash giữ nguyên
 const simpleHash = (str: string): number => {
   let hash = 0;
+  if (!str || str.length === 0) return 12345; // Seed mặc định nếu chuỗi rỗng
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = (hash << 5) - hash + char;
@@ -16,6 +15,7 @@ const simpleHash = (str: string): number => {
   return Math.abs(hash); // Trả về số dương
 };
 
+// Danh sách ICONIC_IMAGES giữ nguyên (bạn có thể mở rộng thêm)
 const ICONIC_IMAGES: Record<string, string> = {
   // Châu Á
   tokyo:
@@ -36,10 +36,17 @@ const ICONIC_IMAGES: Record<string, string> = {
     "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1600&h=900&fit=crop",
   bali: "https://images.unsplash.com/photo-1547291197-e4d38c9c6465?w=1600&h=900&fit=crop",
   beijing:
-    "https://images.unsplash.com/photo-1543974407-9b4f6ce7dy94?w=1600&h=900&fit=crop", // Great Wall
+    "https://images.unsplash.com/photo-1543974407-9b4f6ce7dy94?w=1600&h=900&fit=crop",
   mumbai:
-    "https://images.unsplash.com/photo-1567157577821-f0da1ee3785e?w=1600&h=900&fit=crop", // Gateway of India
-
+    "https://images.unsplash.com/photo-1567157577821-f0da1ee3785e?w=1600&h=900&fit=crop",
+  dubai:
+    "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=1600&h=900&fit=crop",
+  "hong kong":
+    "https://images.unsplash.com/photo-1516081031341-197e42d79c13?w=1600&h=900&fit=crop",
+  taipei:
+    "https://images.unsplash.com/photo-1518623380753-8561 M9A83?w=1600&h=900&fit=crop",
+  "kuala lumpur":
+    "https://images.unsplash.com/photo-1587780003290-db1c5f355529?w=1600&h=900&fit=crop",
   // Châu Âu
   paris:
     "https://images.unsplash.com/photo-1502602898657-3e91760c0341?w=1600&h=900&fit=crop",
@@ -47,33 +54,55 @@ const ICONIC_IMAGES: Record<string, string> = {
   london:
     "https://images.unsplash.com/photo-1505761671935-60b3a7427bad?w=1600&h=900&fit=crop",
   barcelona:
-    "https://images.unsplash.com/photo-1511527661048-7fe73d85e9a4?w=1600&h=900&fit=crop", // Sagrada Familia
+    "https://images.unsplash.com/photo-1511527661048-7fe73d85e9a4?w=1600&h=900&fit=crop",
   amsterdam:
-    "https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?w=1600&h=900&fit=crop", // Canals
+    "https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?w=1600&h=900&fit=crop",
   prague:
-    "https://images.unsplash.com/photo-1519677100294-432f86146671?w=1600&h=900&fit=crop", // Charles Bridge
+    "https://images.unsplash.com/photo-1519677100294-432f86146671?w=1600&h=900&fit=crop",
   berlin:
-    "https://images.unsplash.com/photo-1528728329032-ef09015159b7?w=1600&h=900&fit=crop", // Brandenburg Gate
-
+    "https://images.unsplash.com/photo-1528728329032-ef09015159b7?w=1600&h=900&fit=crop",
+  vienna:
+    "https://images.unsplash.com/photo-1582760711904-89389e78e24a?w=1600&h=900&fit=crop",
+  lisbon:
+    "https://images.unsplash.com/photo-1509218762116-8c46059d479c?w=1600&h=900&fit=crop",
+  athens:
+    "https://images.unsplash.com/photo-1586170138402-81d09f759f96?w=1600&h=900&fit=crop",
+  moscow:
+    "https://images.unsplash.com/photo-1520106212299-d99c443e4568?w=1600&h=900&fit=crop",
   // Châu Mỹ
   "new york":
-    "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=1600&h=900&fit=crop", // Times Square
+    "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=1600&h=900&fit=crop",
   "los angeles":
-    "https://images.unsplash.com/photo-1522898467493-49726bf28193?w=1600&h=900&fit=crop", // Hollywood Sign
+    "https://images.unsplash.com/photo-1522898467493-49726bf28193?w=1600&h=900&fit=crop",
   "rio de janeiro":
-    "https://images.unsplash.com/photo-1483729558449-fb8ef46eedaa?w=1600&h=900&fit=crop", // Christ the Redeemer
+    "https://images.unsplash.com/photo-1483729558449-fb8ef46eedaa?w=1600&h=900&fit=crop",
   "mexico city":
-    "https://images.unsplash.com/photo-1574041539276-464e8b31a57c?w=1600&h=900&fit=crop", // Palacio de Bellas Artes
+    "https://images.unsplash.com/photo-1574041539276-464e8b31a57c?w=1600&h=900&fit=crop",
   toronto:
-    "https://images.unsplash.com/photo-1503206591834-3d6c7014aef0?w=1600&h=900&fit=crop", // CN Tower
-
+    "https://images.unsplash.com/photo-1503206591834-3d6c7014aef0?w=1600&h=900&fit=crop",
+  "san francisco":
+    "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=1600&h=900&fit=crop",
+  "buenos aires":
+    "https://images.unsplash.com/photo-1580402263162-d401f400a4d0?w=1600&h=900&fit=crop",
+  havana:
+    "https://images.unsplash.com/photo-1518638150340-f706e86a5191?w=1600&h=900&fit=crop",
+  cusco:
+    "https://images.unsplash.com/photo-1526392060635-9d6019884377?w=1600&h=900&fit=crop",
   // Châu Phi & Úc
   cairo:
-    "https://images.unsplash.com/photo-1552841847-0e031d2d8548?w=1600&h=900&fit=crop", // Pyramids
+    "https://images.unsplash.com/photo-1552841847-0e031d2d8548?w=1600&h=900&fit=crop",
   "cape town":
-    "https://images.unsplash.com/photo-1549026466-4c1271a364f7?w=1600&h=900&fit=crop", // Table Mountain
+    "https://images.unsplash.com/photo-1549026466-4c1271a364f7?w=1600&h=900&fit=crop",
   sydney:
-    "https://images.unsplash.com/photo-1523059623039-a9ed027e7fad?w=1600&h=900&fit=crop", // Opera House
+    "https://images.unsplash.com/photo-1523059623039-a9ed027e7fad?w=1600&h=900&fit=crop",
+  marrakech:
+    "https://images.unsplash.com/photo-1579471120159-1e3a964f433b?w=1600&h=900&fit=crop",
+  melbourne:
+    "https://images.unsplash.com/photo-1514395462725-fb4566210144?w=1600&h=900&fit=crop",
+  zanzibar:
+    "https://images.unsplash.com/photo-1580218765416-2487216ef308?w=1600&h=900&fit=crop",
+  auckland:
+    "https://images.unsplash.com/photo-1507699622108- MjA3c_w8_w?w=1600&h=900&fit=crop",
 };
 
 const MAP_IMAGE_URL =
@@ -83,55 +112,63 @@ export const imageGenService = {
   simulateImageGeneration: (
     prompt: string,
     width: number = 1200,
-    height: number = 800
+    height: number = 800,
+    // **V6.2:** uniqueSeedInput giờ đây RẤT QUAN TRỌNG cho fallback
+    uniqueSeedInput: string | number = prompt // Mặc định vẫn là prompt nếu id chưa có
   ): Promise<string> => {
-    const delay = Math.random() * 1000 + 500; // Giảm delay để test nhanh hơn
+    const delay = Math.random() * 800 + 400;
     const lowerPrompt = prompt.toLowerCase();
-    let imageURL = ""; // Khởi tạo rỗng
+    let imageURL = "";
     let isMap = false;
 
-    // Ưu tiên kiểm tra map trước
     if (lowerPrompt.includes("map") || lowerPrompt.includes("vector")) {
       imageURL = MAP_IMAGE_URL;
       isMap = true;
       console.log(
-        `[ImageSimV6.2] Detected MAP prompt: "${prompt.substring(0, 50)}..."`
+        `[ImageSimV6.2 FINAL] Detected MAP prompt: "${prompt.substring(
+          0,
+          50
+        )}..."`
       );
     } else {
-      // Tìm từ khóa kỳ quan
       let foundIconic = false;
-      for (const key in ICONIC_IMAGES) {
-        // Bỏ qua key 'default' khi tìm kiếm
-        if (key !== "default" && lowerPrompt.includes(key)) {
+      const sortedKeys = Object.keys(ICONIC_IMAGES).sort(
+        (a, b) => b.length - a.length
+      );
+      for (const key of sortedKeys) {
+        // Không kiểm tra key 'default' ở đây
+        if (lowerPrompt.includes(key)) {
           imageURL = ICONIC_IMAGES[key];
           foundIconic = true;
-          console.log(`[ImageSimV6.2] Found iconic key: "${key}"`);
+          console.log(`[ImageSimV6.2 FINAL] Found iconic key: "${key}"`);
           break;
         }
       }
-      // Nếu không tìm thấy ảnh kỳ quan, dùng fallback với seed từ prompt
+      // **V6.2 FIX:** Dùng uniqueSeedInput (planId) cho fallback DUY NHẤT
       if (!foundIconic) {
-        const fallbackSeed = simpleHash(prompt); // Tạo seed từ prompt
-        imageURL = ICONIC_IMAGES["default"](fallbackSeed); // Gọi hàm default với seed
+        // Sử dụng simpleHash để đảm bảo seed là số, kể cả khi input là UUID
+        const fallbackSeed = simpleHash(String(uniqueSeedInput));
+        // Sử dụng picsum.photos cho fallback với seed duy nhất
+        imageURL = `https://picsum.photos/seed/${fallbackSeed}/${width}/${height}`;
         console.log(
-          `[ImageSimV6.2] No iconic key found. Using fallback with seed: ${fallbackSeed}`
+          `[ImageSimV6.2 FINAL] No iconic key. Using fallback picsum with UNIQUE seed: ${fallbackSeed} from input: ${uniqueSeedInput}`
         );
       }
     }
 
-    // Áp dụng kích thước vào URL (xử lý cả picsum và unsplash)
+    // Áp dụng kích thước (giữ nguyên)
     if (imageURL.includes("picsum.photos")) {
-      imageURL = imageURL.replace(/\/1600\/900$/, `/${width}/${height}`); // Thay thế kích thước cuối URL
+      // Picsum dùng path
     } else if (imageURL.includes("images.unsplash.com")) {
-      imageURL = imageURL.replace(/w=\d+&h=\d+/, `w=${width}&h=${height}`);
-    } else {
-      // Xử lý các nguồn ảnh khác nếu có
+      imageURL = imageURL
+        .replace(/w=\d+/, `w=${width}`)
+        .replace(/h=\d+/, `h=${height}`);
     }
 
     return new Promise((resolve) => {
       setTimeout(() => {
         console.log(
-          `[ImageSimV6.2] Resolved URL: ${imageURL} (isMap: ${isMap})`
+          `[ImageSimV6.2 FINAL] Resolved URL: ${imageURL} (isMap: ${isMap})`
         );
         resolve(imageURL);
       }, delay);

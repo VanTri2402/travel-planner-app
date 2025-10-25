@@ -33,33 +33,49 @@ const ICONS: Record<
 };
 
 /**
- * **V6.2 FIX:** Cập nhật logic parse để làm sạch triệt để hơn.
+ * **V6.2 FIX:** Làm sạch text triệt để hơn.
  */
 const parseItineraryText = (text: string): DayPlan[] => {
   const dayPlans: DayPlan[] = [];
-  // Tách bằng lookahead để giữ delimiter
+  // Tách bằng lookahead để giữ delimiter, xử lý cả ## và ###
   const daySections = text
     .split(/(?=#{2,3}\s*Day\s*\d+)/g)
     .filter((section) => section.trim() !== "");
 
+  console.log("[ItineraryDisplay] Raw daySections:", daySections); // DEBUG
+
   daySections.forEach((section, index) => {
-    const lines = section.split("\n").filter((line) => line.trim() !== "");
-    const title = lines[0]
-      ? lines[0].replace(/#/g, "").trim()
-      : `Day ${index + 1}`;
+    const lines = section
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line !== ""); // Trim ngay khi split và lọc dòng trống
+
+    if (lines.length === 0) return; // Bỏ qua section trống
+
+    // Dòng đầu tiên phải là title
+    const title = lines[0].replace(/^[#\s]+/, "").trim(); // Bỏ # và khoảng trắng đầu dòng
+    console.log(
+      `[ItineraryDisplay] Parsing Day ${index + 1}: Title = "${title}"`
+    ); // DEBUG
 
     const activities: Activity[] = lines
       .slice(1)
       .map((line) => {
-        // **V6.2:** Làm sạch kỹ hơn
+        // **V6.2:** Chuỗi làm sạch tổng hợp
         let cleanedLine = line
-          .trim()
           .replace(/^\*\s*/, "") // Bỏ dấu * đầu dòng
           .replace(/\*\*/g, "") // Bỏ markdown đậm (**)
           .replace(/\[\d+(?:,\s*\d+)*\]/g, "") // Bỏ [0, 1,...] hoặc [1]
-          .replace(/\\n/g, " ") // Thay \n bằng khoảng trắng
+          .replace(/\\n/g, " ") // Thay ký tự '\n' thành khoảng trắng
+          // Không thay thế \n thật sự bằng khoảng trắng nữa, để <p> xử lý
           .replace(/\s{2,}/g, " ") // Thay nhiều khoảng trắng bằng 1
-          .trim(); // Trim lại lần cuối
+          .trim();
+
+        console.log(
+          `[ItineraryDisplay] Day ${
+            index + 1
+          } - Original line: "${line}", Cleaned: "${cleanedLine}"`
+        ); // DEBUG
 
         // Xác định loại activity
         if (cleanedLine.startsWith("EAT:"))
@@ -81,24 +97,47 @@ const parseItineraryText = (text: string): DayPlan[] => {
         (activity) => activity !== null && activity.description
       ) as Activity[];
 
+    console.log(
+      `[ItineraryDisplay] Day ${index + 1} - Parsed Activities:`,
+      activities
+    ); // DEBUG
+
     if (activities.length > 0) {
       dayPlans.push({ title, activities });
+    } else {
+      console.warn(
+        `[ItineraryDisplay] Day ${
+          index + 1
+        } ("${title}") resulted in 0 activities after parsing.`
+      ); // DEBUG
     }
   });
+  console.log("[ItineraryDisplay] Final parsed dayPlans:", dayPlans); // DEBUG
   return dayPlans;
 };
 
 const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ plan }) => {
-  // **V6.2:** Xử lý trường hợp itineraryText bắt đầu bằng Error
+  console.log("[ItineraryDisplay] Rendering with plan:", plan); // DEBUG
+
+  // **V6.2:** Xử lý lỗi hiển thị rõ ràng hơn
+  if (!plan || !plan.itineraryText || plan.itineraryText.trim() === "") {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-6 bg-yellow-100 border border-yellow-300 rounded-lg text-yellow-800">
+        <h3 className="font-bold font-lexend text-xl mb-2">Empty Itinerary</h3>
+        <p>The generated itinerary content is empty.</p>
+      </div>
+    );
+  }
+
+  // Xử lý trường hợp lỗi trả về từ Gemini
   if (plan.itineraryText.trim().startsWith("**Error:**")) {
     return (
       <div className="w-full max-w-4xl mx-auto p-6 bg-red-100 border border-red-300 rounded-lg text-red-800">
         <h3 className="font-bold font-lexend text-xl mb-2">
           Itinerary Generation Error
         </h3>
-        {/* Dùng whitespace-pre-wrap để hiển thị lỗi nhiều dòng */}
         <p className="whitespace-pre-wrap">
-          {plan.itineraryText.replace("**Error:**", "").trim()}
+          {plan.itineraryText.replace(/\*\*Error:\*\*\s*/, "").trim()}
         </p>
       </div>
     );
@@ -106,16 +145,19 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ plan }) => {
 
   const dayPlans = parseItineraryText(plan.itineraryText);
 
-  // Nếu parsing không ra kết quả nào (dù không có lỗi rõ ràng)
+  // Xử lý lỗi parsing
   if (dayPlans.length === 0 && plan.itineraryText) {
+    console.error(
+      "[ItineraryDisplay] Parsing failed to produce any day plans from valid text."
+    ); // DEBUG
     return (
       <div className="w-full max-w-4xl mx-auto p-6 bg-yellow-100 border border-yellow-300 rounded-lg text-yellow-800">
         <h3 className="font-bold font-lexend text-xl mb-2">
-          Itinerary Parsing Issue
+          Itinerary Display Issue
         </h3>
         <p>
-          Could not properly parse the generated itinerary text. Displaying raw
-          content:
+          Could not properly structure the generated itinerary text. Displaying
+          raw content:
         </p>
         <pre className="mt-2 text-sm whitespace-pre-wrap bg-gray-100 p-2 rounded">
           {plan.itineraryText}
@@ -126,12 +168,6 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ plan }) => {
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      {/* ... (Tiêu đề, Card Nguồn giữ nguyên) ... */}
-      <div className="text-left mb-10">...</div>
-      {plan.sources && plan.sources.length > 0 && (
-        <div className="mb-10 ...">...</div>
-      )}
-
       {/* Lịch trình theo ngày */}
       <div className="space-y-12">
         {dayPlans.map((day, dayIndex) => (
