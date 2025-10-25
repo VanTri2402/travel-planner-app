@@ -1,13 +1,15 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-
+import { Link } from "react-router-dom";
+// **FIX:** Đảm bảo import đúng type SavedItinerary
+import { SavedItinerary } from "../types";
+import { useStorage } from "../hooks/storageService";
 import { CalendarIcon, SparklesIcon, TrashIcon } from "../components/icons";
 import LoadingSpinner from "../components/LoadingSpinner";
-import ConfirmationModal from "../components/ConfirmationModal"; // **V6.0 MỚI**
-import { useStorage } from "@/hooks/storageService";
+import ConfirmationModal from "../components/ConfirmationModal";
 
+// **FIX:** Sử dụng type SavedItinerary thay vì 'any'
 const HistoryCard: React.FC<{
-  item: any;
+  item: SavedItinerary;
   onDelete: (id: string) => void;
 }> = ({ item, onDelete }) => {
   const formattedDate = new Date(item.createdAt).toLocaleDateString("en-US", {
@@ -17,11 +19,12 @@ const HistoryCard: React.FC<{
   });
 
   return (
+    // **REMOVED DARK:** Loại bỏ dark styles khỏi card container
     <div className="bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl relative group">
-      {/* Nút Xóa */}
+      {/* Nút Xóa - Chỉ style light */}
       <button
         onClick={(e) => {
-          e.preventDefault(); // Ngăn Link kích hoạt
+          e.preventDefault();
           e.stopPropagation();
           onDelete(item.id);
         }}
@@ -36,9 +39,10 @@ const HistoryCard: React.FC<{
           <img
             src={item.heroImageURL}
             alt={`Hero for ${item.destination}`}
-            className="h-48 w-full object-cover"
+            className="h-48 w-full object-cover" // Giữ nguyên
           />
         ) : (
+          // **REMOVED DARK:** Loại bỏ dark styles khỏi placeholder
           <div className="h-48 w-full bg-gray-100 p-4 flex flex-col justify-center text-left">
             <div className="flex items-center gap-2 text-teal-700">
               <SparklesIcon className="w-4 h-4 flex-shrink-0" />
@@ -53,6 +57,7 @@ const HistoryCard: React.FC<{
         )}
 
         <div className="p-5">
+          {/* **REMOVED DARK:** Loại bỏ dark styles khỏi text */}
           <h3
             className="text-xl font-bold text-gray-900 font-lexend truncate"
             title={item.destination}
@@ -60,6 +65,7 @@ const HistoryCard: React.FC<{
             {item.destination}
           </h3>
           <p className="text-gray-600 mt-1">{item.duration} Days</p>
+          {/* **REMOVED DARK:** Loại bỏ dark styles khỏi date/border */}
           <div className="flex items-center gap-2 text-gray-500 text-sm mt-3 pt-3 border-t border-gray-200">
             <CalendarIcon className="w-4 h-4" />
             <span>{formattedDate}</span>
@@ -71,7 +77,6 @@ const HistoryCard: React.FC<{
 };
 
 const History: React.FC = () => {
-  // **V6.0 MỚI:** Dùng hook useStorage
   const { plans, isLoading, deleteItinerary } = useStorage();
   const [modalOpen, setModalOpen] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
@@ -80,7 +85,6 @@ const History: React.FC = () => {
     setPlanToDelete(id);
     setModalOpen(true);
   };
-
   const handleConfirmDelete = () => {
     if (planToDelete) {
       deleteItinerary(planToDelete);
@@ -90,6 +94,7 @@ const History: React.FC = () => {
   };
 
   if (isLoading) {
+    // Spinner không cần dark style
     return (
       <div className="container mx-auto p-8 text-center">
         <LoadingSpinner text="Loading your journeys..." />
@@ -99,6 +104,7 @@ const History: React.FC = () => {
 
   return (
     <>
+      {/* Modal không cần dark style */}
       <ConfirmationModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -106,12 +112,15 @@ const History: React.FC = () => {
         title="Delete Journey"
         message="Are you sure you want to delete this journey? This action cannot be undone."
       />
+      {/* Container chung không cần dark style */}
       <div className="container mx-auto max-w-7xl p-4 sm:p-6 lg:p-8 animate-fade-in-up">
+        {/* **REMOVED DARK:** Loại bỏ dark style khỏi title */}
         <h1 className="text-4xl font-bold text-gray-900 font-lexend mb-8">
           Your Saved Journeys
         </h1>
 
         {plans.length === 0 ? (
+          // **REMOVED DARK:** Loại bỏ dark styles khỏi empty state
           <div className="text-center py-20 bg-white border border-gray-200 rounded-2xl shadow-md">
             <h2 className="text-2xl font-semibold text-gray-700 font-lexend">
               No journeys saved yet.

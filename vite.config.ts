@@ -16,13 +16,10 @@ export default defineConfig(({ mode }) => {
       "process.env.API_KEY": JSON.stringify(env.GEMINI_API_KEY),
       "process.env.GEMINI_API_KEY": JSON.stringify(env.GEMINI_API_KEY),
 
-      // --- SỬA Ở ĐÂY ---
-      // Thêm các dòng này để expose biến Kinde cho client
       "process.env.VITE_KINDE_DOMAIN": JSON.stringify(env.VITE_KINDE_DOMAIN),
       "process.env.VITE_KINDE_CLIENT_ID": JSON.stringify(
         env.VITE_KINDE_CLIENT_ID
       ),
-      // --- KẾT THÚC SỬA ---
     },
     resolve: {
       alias: {

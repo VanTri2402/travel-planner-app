@@ -2,14 +2,14 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import ProtectedRoute from "./components/ProtectedRoute"; // **V6.0 MỚI**
 import CreatePlanner from "./pages/CreatePlanner";
 import History from "./pages/History";
 import PlannerDetail from "./pages/PlannerDetail";
 import Destinations from "./pages/Destinations";
 import Profile from "./pages/Profile";
-import Callback from "./pages/Callback"; // **V6.0 MỚI**
-import NotFound from "./pages/NotFound"; // **V6.0 MỚI**
+import Callback from "./pages/Callback";
+import ProtectedRoute from "./components/ProtectedRoute";
+import NotFound from "./pages/NotFound";
 
 const App: React.FC = () => {
   return (
